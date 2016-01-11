@@ -1,0 +1,144 @@
+# di Pietrantonj Methods for 2x2 table reconstruction
+# Statistics in Medicine 25: 2299-2322 (2009)
+
+# OR ----
+# From OR, SE_lnOR, m1 (= n1.), m2 (= n2.)
+# 
+or_2x2 <- function(or, se, m1, m2, priority = "a"){
+  if(priority == "a"){
+    alpha <- floor((1-or)^2 + or*m2*(se^2))
+    beta <- or*m1*(2*(1-or) - m2*se^2)
+    gamma <- or*m1*(or*m1 + m2)
+    
+    Am <- -((beta - sqrt(beta^2 - 4*alpha*gamma))/(2*alpha))
+    Ap <- -((beta + sqrt(beta^2 - 4*alpha*gamma))/(2*alpha))
+    Cm <- (Am*m2) / ((or*m1) + Am*(1-or))
+    Cp <- (Ap*m2) / ((or*m1) + Ap*(1-or))
+    
+    cutoff <- ((-or*(or*m1 + m2) + sqrt(or*(or*m1+m2)*(m1+or*m2)))/(1-or^2))
+    
+  }
+  if(priority == "c"){
+    alpha <- (1-or)^2 + or*m1*(se^2)
+    beta <- -m2*(2*(1-or) + m1*or*se^2)
+    gamma <- m2*(m2 + m1*or)
+    
+    Cm <- -((beta - sqrt(beta^2 - 4*alpha*gamma))/(2*alpha))
+    Am <- (or*Cm*m1)/(m2-Cm*(1-or))
+    Cp <- -((beta + sqrt(beta^2 - 4*alpha*gamma))/(2*alpha))
+    Ap <- (or*Cp*m1)/(m2-Cp*(1-or))
+    
+    cutoff <- ((-or*(or*m1 + m2) + sqrt(or*(or*m1+m2)*(m1+or*m2)))/(or^2-1))
+    
+  }
+  
+  Bm <- m1 - Am
+  Dm <- m2 - Cm
+  Bp <- m1 - Ap
+  Dp <- m2 - Cp
+  
+  orp <- (Ap*Dp)/(Bp*Cp)
+  sep <- sqrt(1/Ap + 1/Bp + 1/Cp + 1/Dp)
+  orm <- (Am*Dm)/(Bm*Cm)
+  sem <- sqrt(1/Am + 1/Bm + 1/Cm + 1/Dm)
+  
+  admis_low <- 0
+  admis_upp <- m1
+  
+  out <- data.frame(table1_a = round(Ap), table1_b = round(Bp), 
+                    table1_c = round(Cp), table1_d = round(Dp), 
+                    table1_or = orp, table1_se = sep, 
+                    table2_a = round(Am), table2_b = round(Bm), 
+                    table2_c = round(Cm), table2_d = round(Dm),
+                    table2_or = orm, table2_se = sem, 
+                    cutoff = cutoff, 
+                    admissability_lower = admis_low, admissability_upper = admis_upp)
+  out
+}
+
+
+
+
+# RR ----
+# From RR, SE_lnRR, m1, m2
+# 
+rr_2x2 <- function(rr, se, m1, m2, priority = "a"){
+  A <- (m2+rr*m1)/(m2*(se^2 + ((m1+m2)/(m1*m2))))
+  C <- (m2+rr*m1)/(rr*m1*(se^2 + ((m1+m2)/(m1*m2))))
+  C2 <- (A*m2)/(rr*m1)
+  B <- m1 - A
+  D <- m2 - C
+  
+  # admissability interval
+  # admiss_a <- c(0, min(c(m1, (m1*((m1*rr+m2)/(m1+m2))))))
+  # admiss_c <- c(0, min(c(m2, (m2*((m1*rr+m2)/rr*(m1+m2))))))
+  
+  rrp <- (A/(A+B))/(C/(C+D))
+  sep <- sqrt(1/A - 1/(A+B) + 1/C - 1/(C+D))
+  
+  admis_low <- 0
+  admis_upp <- apply(data.frame(m1, m1*((m1*rr+m2)/(m1+m2))), 1, min)
+  
+  out <- data.frame(table1_a = round(A), table1_b = round(B), 
+                    table1_c = round(C), table1_d = round(D), 
+                    table1_rr = rrp, table1_se = sep, 
+                    admissability_lower = admis_low, admissability_upper = admis_upp)
+  out
+}
+
+
+
+
+# RD ----
+# From RD, SE_RD, m1, m2 
+# 
+rd_2x2 <- function(rd, se, m1, m2, priority = "a"){
+  if(priority == "a"){
+    alpha <- m1 + m2
+    beta <- -m1*(m1*(1+2*rd) + m2)
+    gamma <- m1^3 * (rd*(1+rd) + (se^2)*m2)
+    
+    Am <- -((beta - sqrt(beta^2 - 4*alpha*gamma))/(2*alpha))
+    Cm <- ((Am*m2)/m1) - rd*m2
+    Ap <- -((beta + sqrt(beta^2 - 4*alpha*gamma))/(2*alpha))
+    Cp <- ((Ap*m2)/m1) - rd*m2
+    
+    cutoff <- (0.5 + ((m1*rd)/(m1+m2)))*m1
+  }
+  if(priority == "c"){
+    alpha <- (m1^2)*m2 + m1^3
+    beta <- -m2*((m1^2)*m2 + m1^3) + 2*rd*(m1^2)*(m2^2)
+    gamma <- -m1^2*(m2^3) * (rd*(1-rd)) + (m1^3)*(m2^3)*(se^2)
+    
+    Cm <- -((beta - sqrt(beta^2 - 4*alpha*gamma))/(2*alpha))
+    Am <- ((Cm*m1)/m2) + rd*m1
+    Cp <- -((beta + sqrt(beta^2 - 4*alpha*gamma))/(2*alpha))
+    Ap <- ((Cp*m1)/m2) + rd*m1
+    
+    cutoff <- (0.5 - ((m2*rd)/(m1+m2)))*m2
+  }
+  
+  Bm <- m1 - Am
+  Dm <- m2 - Cm
+  Bp <- m1 - Ap
+  Dp <- m2 - Cp
+  
+  rdp <- Ap/m1 - Cp/m2 
+  sep <- sqrt(((Ap*(m1-Ap))/(m1^3)) + ((Cp*(m2-Cp))/(m2^3)))
+  rdm <- Am/m1 - Cm/m2 
+  sem <- sqrt(((Am*(m1-Am))/(m1^3)) + ((Cm*(m2-Cm))/(m2^3)))
+  
+  admis_low <- ifelse(rd < 0, 0, rd*m1)
+  admis_upp <- ifelse(rd < 0, m1, (1+rd)*m1)
+  
+  out <- data.frame(table1_a = Ap, table1_b = Bp, 
+                    table1_c = Cp, table1_d = Dp,
+                    table1_rd = rdp, table1_se = sep,
+                    table2_a = Am, table2_b = Bm, 
+                    table2_c = Cm, table2_d = Dm,
+                    table2_rd = rdm, table2_se = sem,
+                    admissibility_lower = admis_low,
+                    admissibility_upper = admis_upp,
+                    cutoff = cutoff)
+  out
+}
